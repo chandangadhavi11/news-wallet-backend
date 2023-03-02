@@ -29,6 +29,7 @@ client = pymongo.MongoClient("mongodb://localhost:27017/")
 DB = client["fyp-news-dataset"]
 COLLECTION = DB["news-dataset"]
 USER_COLLECTION = DB["user-dataset"]
+IMAGE_COLLECTION = DB["image-dataset"]
 
 
 def remove_special_chars(string):
@@ -49,6 +50,7 @@ def get_news():
 @app.route("/create/news", methods=['POST'])
 def create_news():
     title = request.form.get('title')
+    author_name = request.form.get('author_name')
     content = request.form.get('content')
 
     # Current data and time in ISO format
@@ -60,7 +62,7 @@ def create_news():
     url = "http://ip-api.com/json/"
     response = requests.request("GET", url)
     response = response.json()
-    location = response["city"] + ", " + response["country"]
+    location = response["city"]
 
 
     tags = request.form.get('tags')
@@ -104,6 +106,7 @@ def create_news():
         "news_id" : news_id,
         'title': title,
         'content': content,
+        "author_name" : author_name,
         'date': date,
         'location': location,
         'approved': approved,
@@ -166,6 +169,7 @@ def login():
 def register():
     username = request.form.get('username')
     password = request.form.get('password')
+    name = request.form.get('name')
 
     if username == "" or password == "":
         return dumps({"error": "Please fill all the fields"})
@@ -179,6 +183,7 @@ def register():
     # save the user in the database
     user = USER_COLLECTION.insert_one(
         {
+        'name': name,
         'username': username,
         'password': password
         })
@@ -209,6 +214,21 @@ def get_news_short():
         "real" : request.form.get('content'),
         "short" : data
     })
+
+# save the image in the database
+@app.route("/api/save/image", methods=['POST'])
+def save_image():
+    image = request.files['image']
+    image = set_image(image)
+
+    # save the image in the database
+    image = IMAGE_COLLECTION.insert_one(
+        {
+        'image': image
+        })
+    
+    return dumps({"success": "Image created successfully"})
+
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1',port=8000,debug=True)
